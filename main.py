@@ -22,7 +22,12 @@ def run_game():
     DEFAULT_SPEED = 12
     DEATH_DELAY = 700
     
-    # Posición inicial (35% de la pantalla)
+    # --- MODO DIOS (PARA TESTEO) ---
+    # True = No mueres con nada (pero los portales funcionan)
+    # False = Juego normal
+    GOD_MODE = True  
+    
+    # Posición inicial
     PLAYER_START_X = int(WIDTH * 0.35)
     
     window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
@@ -99,6 +104,8 @@ def run_game():
     font_attempts = pygame.font.SysFont("Arial", 50, bold=True)
     font_win = pygame.font.SysFont("Arial", 100, bold=True)
     font_progress = pygame.font.SysFont("Arial", 30, bold=True)
+    # Fuente pequeña para indicar modo Dios
+    font_debug = pygame.font.SysFont("Arial", 20, bold=True) 
 
     def reset_level(increment_attempt=True):
         nonlocal is_dead, players, portal_cooldown, current_game_speed, attempts, game_won
@@ -124,14 +131,15 @@ def run_game():
             try: pygame.mixer.music.play(-1)
             except: pass
 
-    # --- COLISIÓN ---
+    # --- SISTEMA DE COLISIÓN POR LÍNEAS ---
     def check_precise_collision(player_rect, tile_rect, tile_type):
         if tile_type not in [7, 8, 17, 18]: 
             kill_box = pygame.Rect(0, 0, 6, 6)
             kill_box.center = player_rect.center
             return kill_box.colliderect(tile_rect)
             
-        start_pos, end_pos = None, None
+        start_pos = None
+        end_pos = None
         
         if tile_type == 7: # / Normal
             start_pos, end_pos = tile_rect.bottomleft, tile_rect.topright
@@ -169,6 +177,11 @@ def run_game():
                     reset_level(increment_attempt=True)
                     paused = False
                 if event.key == pygame.K_h: debug_mode = not debug_mode
+                
+                # Tecla G para alternar Modo Dios en caliente
+                if event.key == pygame.K_g:
+                    GOD_MODE = not GOD_MODE
+                    print(f"GOD MODE: {GOD_MODE}")
 
         if not paused and not game_won:
             if is_dead:
@@ -197,11 +210,13 @@ def run_game():
                             tid = tile['type']
                             tile_rect = tile['rect']
 
+                            # Ganar
                             if tid == 99:
                                 game_won = True
                                 if music_loaded: pygame.mixer.music.stop()
                                 break
 
+                            # Portales
                             portal_hitbox = None
                             if tid in SPECIAL_IDS and tid != 99:
                                 portal_hitbox = pygame.Rect(0, 0, 40, 90)
@@ -228,9 +243,14 @@ def run_game():
                             if tid == 27 and p.rect.colliderect(portal_hitbox): p.set_mini(True); continue
                             if tid == 28 and p.rect.colliderect(portal_hitbox): p.set_mini(False); continue
 
+                            # --- MUERTE ---
+                            # Si NO es un portal, chequeamos colisión mortal
                             if tid not in SPECIAL_IDS:
-                                if check_precise_collision(p.rect, tile_rect, tid):
-                                    collision = True
+                                # AQUÍ ESTÁ EL TRUCO DEL GOD MODE
+                                if not GOD_MODE: 
+                                    if check_precise_collision(p.rect, tile_rect, tid):
+                                        collision = True
+                            
                             if collision: break
                         if collision: break
                     
@@ -256,16 +276,16 @@ def run_game():
                     if tid >= 10: c = (100, 100, 255) 
                     pygame.draw.rect(window, c, rect)
                 
-                # DEBUG VISUAL: SOLO LÍNEAS
+                # DEBUG VISUAL LIMPIO
                 if debug_mode:
                     if tid == 7:
                         pygame.draw.line(window, (255, 0, 0), rect.bottomleft, rect.topright, 3)
                     elif tid == 8:
                         pygame.draw.line(window, (255, 0, 0), rect.topleft, rect.bottomright, 3)
-                    elif tid == 17: # Mini / (Solo Línea)
+                    elif tid == 17: # Mini / (Solo Línea, sin caja)
                         end_p = (rect.left + 20, rect.top)
                         pygame.draw.line(window, (255, 0, 0), rect.bottomleft, end_p, 3)
-                    elif tid == 18: # Mini \ (Solo Línea)
+                    elif tid == 18: # Mini \ (Solo Línea, sin caja)
                         end_p = (rect.left + 20, rect.bottom)
                         pygame.draw.line(window, (255, 0, 0), rect.topleft, end_p, 3)
                     elif tid in SPECIAL_IDS:
@@ -279,6 +299,11 @@ def run_game():
             if debug_mode: 
                 pygame.draw.circle(window, (0, 255, 0), p.rect.center, 3)
                 pygame.draw.rect(window, (255, 255, 0), p.rect, 1)
+
+        # Indicador de Modo Dios (Texto pequeño abajo)
+        if GOD_MODE:
+            txt_god = font_debug.render("GOD MODE (G)", True, (0, 255, 0))
+            window.blit(txt_god, (10, HEIGHT - 30))
 
         if not game_won:
             if attempt_text_x > -200: 
@@ -333,7 +358,7 @@ tk.Button(frame_menu, text="SALIR", command=root.quit, font=BTN_FONT, width=BTN_
 
 frame_controles = tk.Frame(root, bg=BG_COLOR_VENTANA)
 tk.Label(frame_controles, text="Instrucciones", font=("Century Gothic", 24, "bold"), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=40)
-tk.Label(frame_controles, text="ESPACIO para subir.\nSuelta para bajar.\n'ESC' para Pausar.\n'Q' para Salir.\n'R' para Reiniciar.\n'H' para ver Hitboxes.", font=("Century Gothic", 14), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=20)
+tk.Label(frame_controles, text="ESPACIO para subir.\nSuelta para bajar.\n'ESC' para Pausar.\n'Q' para Salir.\n'R' para Reiniciar.\n'H' para ver Hitboxes.\n'G' para Modo Dios.", font=("Century Gothic", 14), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=20)
 tk.Button(frame_controles, text="VOLVER", command=volver_al_menu, font=BTN_FONT, width=BTN_WIDTH, height=BTN_HEIGHT, bg=BTN_BG, fg=BTN_FG).pack(pady=50)
 
 frame_controles.pack_forget()
