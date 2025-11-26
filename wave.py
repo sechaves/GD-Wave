@@ -1,5 +1,11 @@
 import pygame
 import os
+import sys
+
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(relative_path)
 
 class Wave:
     def __init__(self, x, y, speed, inverted=False):
@@ -42,7 +48,7 @@ class Wave:
         self.trail_width = 4 if self.is_mini else 8 
         self.image = None
         try:
-            img_path = os.path.join("assets", base_img_name)
+            img_path = resource_path(os.path.join("assets", base_img_name))
             loaded_img = pygame.image.load(img_path).convert_alpha()
             self.original_image = pygame.transform.smoothscale(loaded_img, (self.image_size, self.image_size))
             if self.current_gravity_inverted:

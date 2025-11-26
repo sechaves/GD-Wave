@@ -3,8 +3,16 @@ import tkinter as tk
 import threading
 import map  
 import wave 
+import sys
 import os
 import ctypes 
+
+def resource_path(relative_path):
+    """Devuelve la ruta real al asset tanto en .py como en .exe"""
+    if hasattr(sys, "_MEIPASS"):
+        # Ruta temporal creada por PyInstaller
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(relative_path)
 
 # =============================================================================
 #   JUEGO PRINCIPAL
@@ -31,7 +39,7 @@ def run_game():
     
     music_loaded = False 
     try:
-        music_path = os.path.join("assets", "10000.mp3")
+        music_path = resource_path(os.path.join("assets", "10000.mp3"))
         pygame.mixer.music.load(music_path)
         pygame.mixer.music.set_volume(0.5)
         music_loaded = True 
@@ -40,7 +48,7 @@ def run_game():
     textures = {} 
     def load_texture(key, filename, color_fallback, custom_size=None):
         try:
-            full_path = os.path.join("assets", filename)
+            full_path = resource_path(os.path.join("assets", filename))
             img = pygame.image.load(full_path).convert_alpha()
             target_size = custom_size if custom_size else (30, 30)
             img = pygame.transform.smoothscale(img, target_size)
