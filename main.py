@@ -21,11 +21,7 @@ def run_game():
     FPS = 60
     DEFAULT_SPEED = 12
     DEATH_DELAY = 700
-    
-    # --- MODO DIOS (PARA TESTEO) ---
-    # True = No mueres con nada (pero los portales funcionan)
-    # False = Juego normal
-    GOD_MODE = True  
+    GOD_MODE = False  
     
     # Posición inicial
     PLAYER_START_X = int(WIDTH * 0.35)
@@ -83,9 +79,11 @@ def run_game():
     load_texture(23, "vel_x3.png", (255, 0, 255), custom_size=(50, 90)) 
     load_texture(24, "vel_x4.png", (255, 0, 0), custom_size=(50, 90))  
 
-    # Modificadores
+    # Gravedad
     load_texture(25, "gravity_inverted.png", (255, 255, 0), custom_size=(50,90))
     load_texture(26, "gravity_normal.png", (0, 0, 255), custom_size=(50,90))
+    
+    # Tamaño
     load_texture(27, "size_mini.png", (255, 0, 255), custom_size=(50,90))
     load_texture(28, "size_normal.png", (0, 255, 0), custom_size=(50,90))
 
@@ -101,11 +99,10 @@ def run_game():
     attempts = 1
     distance_traveled, map_total_width_px, attempt_text_x = 0, 0, 0
     
-    font_attempts = pygame.font.SysFont("Arial", 50, bold=True)
-    font_win = pygame.font.SysFont("Arial", 100, bold=True)
-    font_progress = pygame.font.SysFont("Arial", 30, bold=True)
-    # Fuente pequeña para indicar modo Dios
-    font_debug = pygame.font.SysFont("Arial", 20, bold=True) 
+    font_attempts = pygame.font.SysFont("Monserrat", 50, bold=True)
+    font_win = pygame.font.SysFont("Monserrat", 100, bold=True)
+    font_progress = pygame.font.SysFont("Monserrat", 30, bold=True)
+    font_debug = pygame.font.SysFont("Monserrat", 20, bold=True) 
 
     def reset_level(increment_attempt=True):
         nonlocal is_dead, players, portal_cooldown, current_game_speed, attempts, game_won
@@ -117,7 +114,8 @@ def run_game():
         map.group_1_top(0, 0, objects, block_size)
         map.group_1_bot(0, 540, objects, block_size) 
         
-        if len(objects) > 0: map_total_width_px = objects[0].map_width * block_size
+        if len(objects) > 0:
+            map_total_width_px = 44 * current_game_speed * FPS
         distance_traveled = 0
         attempt_text_x = PLAYER_START_X + 300 
         
@@ -181,7 +179,7 @@ def run_game():
                 # Tecla G para alternar Modo Dios en caliente
                 if event.key == pygame.K_g:
                     GOD_MODE = not GOD_MODE
-                    print(f"GOD MODE: {GOD_MODE}")
+                    print(f"Invencibilidad: {GOD_MODE}")
 
         if not paused and not game_won:
             if is_dead:
@@ -242,11 +240,7 @@ def run_game():
                             if tid == 26 and p.rect.colliderect(portal_hitbox): p.set_gravity(False); continue
                             if tid == 27 and p.rect.colliderect(portal_hitbox): p.set_mini(True); continue
                             if tid == 28 and p.rect.colliderect(portal_hitbox): p.set_mini(False); continue
-
-                            # --- MUERTE ---
-                            # Si NO es un portal, chequeamos colisión mortal
                             if tid not in SPECIAL_IDS:
-                                # AQUÍ ESTÁ EL TRUCO DEL GOD MODE
                                 if not GOD_MODE: 
                                     if check_precise_collision(p.rect, tile_rect, tid):
                                         collision = True
@@ -260,7 +254,6 @@ def run_game():
                         break 
                     if game_won: break
 
-        # --- DIBUJADO ---
         for obj in objects:
             for tile in obj.tiles:
                 tid = tile['type']
@@ -276,16 +269,15 @@ def run_game():
                     if tid >= 10: c = (100, 100, 255) 
                     pygame.draw.rect(window, c, rect)
                 
-                # DEBUG VISUAL LIMPIO
                 if debug_mode:
                     if tid == 7:
                         pygame.draw.line(window, (255, 0, 0), rect.bottomleft, rect.topright, 3)
                     elif tid == 8:
                         pygame.draw.line(window, (255, 0, 0), rect.topleft, rect.bottomright, 3)
-                    elif tid == 17: # Mini / (Solo Línea, sin caja)
+                    elif tid == 17: 
                         end_p = (rect.left + 20, rect.top)
                         pygame.draw.line(window, (255, 0, 0), rect.bottomleft, end_p, 3)
-                    elif tid == 18: # Mini \ (Solo Línea, sin caja)
+                    elif tid == 18: 
                         end_p = (rect.left + 20, rect.bottom)
                         pygame.draw.line(window, (255, 0, 0), rect.topleft, end_p, 3)
                     elif tid in SPECIAL_IDS:
@@ -300,14 +292,13 @@ def run_game():
                 pygame.draw.circle(window, (0, 255, 0), p.rect.center, 3)
                 pygame.draw.rect(window, (255, 255, 0), p.rect, 1)
 
-        # Indicador de Modo Dios (Texto pequeño abajo)
         if GOD_MODE:
-            txt_god = font_debug.render("GOD MODE (G)", True, (0, 255, 0))
+            txt_god = font_debug.render("Invencibilidad: Activada :)", True, (0, 255, 0))
             window.blit(txt_god, (10, HEIGHT - 30))
 
         if not game_won:
             if attempt_text_x > -200: 
-                window.blit(font_attempts.render(f"Attempt {attempts}", True, (255,255,255)), (attempt_text_x, HEIGHT//3))
+                window.blit(font_attempts.render(f"Intento {attempts}", True, (255,255,255)), (attempt_text_x, HEIGHT//3))
             if map_total_width_px > 0:
                 pct = min(1.0, distance_traveled / map_total_width_px)
                 bar_w, bar_h = 500, 20
@@ -344,7 +335,7 @@ root = tk.Tk()
 root.title("Wave Game")
 root.attributes('-fullscreen', True) 
 root.bind('<Escape>', lambda e: root.destroy())
-BG_COLOR_VENTANA, COLOR_TEXTO = "#2C3E50", "white"
+BG_COLOR_VENTANA, COLOR_TEXTO = "#0984FF", "white"
 BTN_FONT = ("Century Gothic", 14, "bold")
 BTN_WIDTH, BTN_HEIGHT = 20, 2
 BTN_BG, BTN_FG = "#ECF0F1", "#000000"
@@ -358,7 +349,7 @@ tk.Button(frame_menu, text="SALIR", command=root.quit, font=BTN_FONT, width=BTN_
 
 frame_controles = tk.Frame(root, bg=BG_COLOR_VENTANA)
 tk.Label(frame_controles, text="Instrucciones", font=("Century Gothic", 24, "bold"), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=40)
-tk.Label(frame_controles, text="ESPACIO para subir.\nSuelta para bajar.\n'ESC' para Pausar.\n'Q' para Salir.\n'R' para Reiniciar.\n'H' para ver Hitboxes.\n'G' para Modo Dios.", font=("Century Gothic", 14), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=20)
+tk.Label(frame_controles, text="Manten presionado ESPACIO o ↑ (Flecha arriba) para subir.\nSuelta para bajar.\n'ESC' para Pausar.\n'Q' para Salir.\n'R' para Reiniciar.\n'H' para ver Hitboxes.\n'G' No lo presiones ;(.\n\n\n\n Pro Tip: Manten para subir, suelta para bajar, en partes rectas, oprime rapido :)", font=("Century Gothic", 14), bg=BG_COLOR_VENTANA, fg=COLOR_TEXTO).pack(pady=20)
 tk.Button(frame_controles, text="VOLVER", command=volver_al_menu, font=BTN_FONT, width=BTN_WIDTH, height=BTN_HEIGHT, bg=BTN_BG, fg=BTN_FG).pack(pady=50)
 
 frame_controles.pack_forget()
